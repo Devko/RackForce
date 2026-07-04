@@ -14,7 +14,7 @@ decisions.
 It runs alongside Akai's own app as an overlay AddOn. It does not replace or
 modify the firmware.
 
-> v0.1.1-beta — early build, expect rough edges. Bug reports welcome, see
+> v0.1.2-beta — early build, expect rough edges. Bug reports welcome, see
 > [Feedback](#feedback).
 
 ## Requirements
@@ -24,7 +24,7 @@ modify the firmware.
 
 ## Install
 
-1. Download `RackForce-v0.1.1-beta.zip` from the [Releases page](../../releases).
+1. Download `RackForce-v0.1.2-beta.zip` from the [Releases page](../../releases).
 2. Copy the `ModularRack` folder it contains onto your MockbaMod SD card, into:
 
    ```
@@ -112,7 +112,7 @@ transport stay on the voice channels above.
 
 ### 3. Web patch bay
 
-Open `http://<force-ip>:8080/` from a phone or laptop on the same network for
+Open `http://<force-ip>:8088/` from a phone or laptop on the same network for
 a live view of the loaded patch — one card per module, sliders for every
 parameter, updating in both directions in real time. Single self-contained
 page, no build step, works offline. A loopback-only JSON API is also
