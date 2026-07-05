@@ -11,6 +11,12 @@ Force makes the sound, RackForce makes the musical decisions.
 
 Runs alongside Akai's own app as an overlay AddOn — doesn't touch the firmware.
 
+### [Download RackForce v0.2.0-beta](https://github.com/Devko/RackForce/releases/tag/v0.2.0-beta)
+
+Prebuilt ARM binary, no GitHub account or build step needed — grab the
+`.zip` from the "Assets" section on that page. See [Install](#install) below
+for what to do with it.
+
 > v0.2.0-beta — early build, expect rough edges. Bug reports welcome, see
 > [Feedback](#feedback).
 
@@ -50,7 +56,7 @@ painting:**
 
 ## Install
 
-1. Download `RackForce-v0.2.0-beta.zip` from the [Releases page](../../releases).
+1. Download `RackForce-v0.2.0-beta.zip` from the [v0.2.0-beta release page](https://github.com/Devko/RackForce/releases/tag/v0.2.0-beta) (all versions: [Releases](../../releases)).
 2. Copy the `ModularRack` folder it contains onto your MockbaMod SD card, into:
 
    ```
