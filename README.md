@@ -3,19 +3,29 @@
 [![Release](https://img.shields.io/github/v/release/Devko/RackForce?include_prereleases&label=release)](../../releases)
 
 A browser-patchable modular MIDI rack for the **Akai Force**, running as a
-[MockbaMod](https://github.com/MockbaTheBorg/MockbaMod) AddOn. A background
-process runs a graph of one-job modules — generative and Euclidean
-sequencers, a drum machine, a chord/progression engine, quantizers, LFOs —
-wired together and driving the Force's own synths over MIDI. Module design
-takes cues from Mutable Instruments' Eurorack modules (Marbles, Grids,
-Tides, Branches): the Force makes the sound, RackForce makes the musical
-decisions.
+[MockbaMod](https://github.com/MockbaTheBorg/MockbaMod) AddOn. Generative and
+Euclidean sequencers, a drum machine, a chord engine, quantizers, LFOs — wired
+together and driving the Force's own synths over MIDI. Design takes cues from
+Mutable Instruments' Eurorack modules (Marbles, Grids, Tides, Branches): the
+Force makes the sound, RackForce makes the musical decisions.
 
-It runs alongside Akai's own app as an overlay AddOn. It does not replace or
-modify the firmware.
+Runs alongside Akai's own app as an overlay AddOn — doesn't touch the firmware.
 
-> v0.1.2-beta — early build, expect rough edges. Bug reports welcome, see
+> v0.2.0-beta — early build, expect rough edges. Bug reports welcome, see
 > [Feedback](#feedback).
+
+## Highlights
+
+- **Musicality pass** — velocity accents, humanization, phrase-aware
+  generative lines, fixed chord voice-leading, per-drum note config.
+- **Routing** — MIDI-In brings live Force pads/keys into a chain; a named
+  internal note bus (`bus_send`/`bus_in`) fans one lane's output into others.
+- **Live config edits** — changing a genre/scale/key mid-playback no longer
+  panics all notes off and restarts the transport.
+- **Opal-style step editor** — paged (Trig/Vel/Prob/Gate/Ratchet/Nudge/Mod),
+  mouse-drag painting of values across steps.
+- **23 drum genres**, key/root picker on Gen/Marbles/Markov/Turing, and an
+  honest publisher/follower harmony badge in the web UI.
 
 ## Requirements
 
@@ -24,7 +34,7 @@ modify the firmware.
 
 ## Install
 
-1. Download `RackForce-v0.1.2-beta.zip` from the [Releases page](../../releases).
+1. Download `RackForce-v0.2.0-beta.zip` from the [Releases page](../../releases).
 2. Copy the `ModularRack` folder it contains onto your MockbaMod SD card, into:
 
    ```
@@ -59,22 +69,21 @@ modify the firmware.
 ### 1. Route the voices
 
 RackForce registers an ALSA client named `ModularRack`, with one MIDI input
-port and one MIDI output port. Confirm it's running over SSH:
+and one MIDI output port. Confirm it's running over SSH:
 
 ```sh
 aconnect -l   # look for a client called "ModularRack"
 ```
 
-On each Force MIDI track you want driven by the rack:
+On each Force MIDI track driven by the rack:
 
-- Set the track's **INPUT** to the `ModularRack` client, so generated notes
-  come back into the Force and play through your instrument.
-- Set the *driving* track's **OUTPUT** to `ModularRack` and turn **Sync ON**,
-  so the Force sends MIDI clock (24 PPQN) plus start/stop/continue — without
-  Sync the rack gets no clock and won't advance.
+- **INPUT** → the `ModularRack` client, so generated notes reach your
+  instrument.
+- **OUTPUT** (on the driving track) → `ModularRack`, **Sync ON**, so the
+  Force sends MIDI clock (24 PPQN) plus start/stop/continue — without Sync
+  the rack gets no clock and won't advance.
 
-The rack is multitimbral: one patch drives a whole arrangement, each voice on
-its own channel. Default patch channel map:
+One patch drives a whole arrangement — each voice on its own channel:
 
 | Voice  | MIDI channel | Route to |
 |--------|:---:|---|
@@ -89,34 +98,21 @@ Channel 16 carries knob moves and patch switches only; notes, clock and
 transport stay on the voice channels above.
 
 - **Knobs → parameters:** each module gets a block of 10 CCs, in patch order,
-  starting at CC 16:
-
-  ```
-  module = (cc - 16) / 10      # which module (0 = first added)
-  param  = (cc - 16) % 10      # which parameter of that module
-  ```
-
-  A CC value (0–127) is rescaled into that parameter's real range, so one
-  knob sweep always covers the whole parameter. Start the daemon with
-  `--verbose` to print the live CC → (module, parameter) map for the loaded
-  patch — trust that over any static table.
-
-- **Patch switching:** send a **Program Change on channel 16**; program
-  number = patch index (0 = default).
-
-- **Macro knobs:** create a MIDI track, set its output to `ModularRack` and
-  channel to 16, then learn each knob to a CC from the `--verbose` map on the
-  track's MIDI-Control page. Save the track as a Force template (`.xtk`) to
-  reuse the mapping later — the same pattern Harpie4T uses for its own
-  control surface.
+  starting at CC 16 — `module = (cc-16)/10`, `param = (cc-16)%10`. A CC's
+  0–127 value is rescaled into that parameter's real range. Start the daemon
+  with `--verbose` to print the live map for the loaded patch — trust that
+  over any static table.
+- **Patch switching:** Program Change on channel 16, program = patch index.
+- **Macro knobs:** a MIDI track, output `ModularRack`, channel 16, knobs
+  learned to CCs from the `--verbose` map. Save it as a Force template
+  (`.xtk`) to reuse — same pattern Harpie4T uses for its control surface.
 
 ### 3. Web patch bay
 
-Open `http://<force-ip>:8088/` from a phone or laptop on the same network for
-a live view of the loaded patch — one card per module, sliders for every
-parameter, updating in both directions in real time. Single self-contained
-page, no build step, works offline. A loopback-only JSON API is also
-available on `127.0.0.1:8099` for scripting.
+Open `http://<force-ip>:8088/` from a phone or laptop on the same network —
+one card per module, sliders for every parameter, updating live in both
+directions. Single self-contained page, no build step, works offline. A
+loopback-only JSON API is also on `127.0.0.1:8099` for scripting.
 
 ## Modules
 
@@ -126,23 +122,30 @@ above.
 
 | Module | Type | Category | Description |
 |---|---|---|---|
-| DrumSeq | `drum_seq` | Rhythm | Genre-aware 8-lane drum sequencer — per-step velocity/probability, swing, ratchet/roll, GM drum-note mapping to the MPC Drum group. |
+| MidiIn | `midi_in` | Routing | Live MIDI input from the Force's pads/keys into a lane (e.g. `midi_in` → Arp arpeggiates whatever you hold); filterable to Omni or a single channel. |
+| BusIn | `bus_in` | Routing | Reads a named internal note bus and emits it as a source; two `bus_in` lanes reading the same name both play whatever's sent to it. |
+| BusSend | `bus_send` | Routing | Mirrors a lane's notes onto a named internal bus while still passing them through — e.g. one ChordSeq feeding two independent Arps. |
+| DrumSeq | `drum_seq` | Rhythm | Genre-aware 8-lane drum sequencer (23 genres) — per-step velocity/probability, swing, ratchet/roll, GM drum-note mapping to the MPC Drum group. |
 | Euclid | `euclid` | Rhythm | Poly-lane Euclidean rhythm generator (Bjørklund); each lane runs its own steps/pulses/rotation, together building a full drum voice. |
 | Grids | `grids` | Rhythm | Mutable Grids-style 2D drum pattern morphing — an X/Y coordinate blends four corner patterns per voice (kick/snare/hat). |
-| StepSeq | `step_seq` | Rhythm | Deep hardware-flavored multi-lane step sequencer for drums (Digitakt/Opal spirit) — per-step velocity, probability, ratchet count, micro-timing, gate length, trig conditions. |
-| ChordSeq | `chord_seq` | Harmony | Roman-numeral chord progression generator with optional voice-leading; publishes the current chord + scale to the shared harmony bus so other modules follow the changes. |
+| StepSeq | `step_seq` | Rhythm | Elektron/Opal-style paged step sequencer for drums — per-step velocity, probability, ratchet, micro-timing, gate length, trig conditions; mouse-drag painting in the web UI. |
+| ChordSeq | `chord_seq` | Harmony | Roman-numeral chord progression generator with voice-leading; publishes the current chord + scale to the shared harmony bus so other modules follow the changes. |
 | Chord | `chord` | Harmony | Turns a single incoming note into a chord — diatonically via the harmony bus, or a fixed quality — handy for harmonizing a generative line. |
-| Gen | `gen` | Melody | Scale-based generative sequencer; each note is picked near the last one, biased by a contour direction, snapped to the current scale/harmony. |
-| Marbles | `marbles` | Melody | Controllable-randomness note + gate source (Mutable Marbles-inspired); a "déjà vu" control blends fresh random notes with a locked, repeating loop. |
+| Gen | `gen` | Melody | Scale-based generative sequencer with phrase-aware melodic logic — chord-tone bias on strong beats, phrase-end rests, a repeating motif buffer. |
+| Marbles | `marbles` | Melody | Controllable-randomness note + gate source (Mutable Marbles-inspired); "déjà vu" blends fresh random notes with a locked, repeating loop. |
 | Markov | `markov` | Melody | Markov-chain melody generator with musical priors — favors stepwise motion and chord tones over big leaps, boosted on strong beats by the harmony bus. |
-| Turing | `turing` | Melody | Looping shift-register sequencer (Turing Machine-inspired); a "chance" control scrambles a locked, repeating loop into controlled randomness. |
+| Turing | `turing` | Melody | Looping shift-register sequencer (Turing Machine-inspired); "chance" scrambles a locked, repeating loop into controlled randomness. |
 | Arp | `arp` | Melody | Step arpeggiator over the currently held notes — mode (up/down/random/...), octave range, and rhythm pattern. |
 | ScaleQuantizer | `scale_quantizer` | Utility | Snaps incoming note pitches to a chosen scale/key (or the shared harmony bus); no stuck notes. |
 | LFO | `lfo` | Modulation | Clock-synced low-frequency oscillator emitting CC values, for hands-free movement of the Force's macros. |
-| Tides | `tides` | Modulation | Shapeable clock-synced modulation source (Tides-inspired); a slope control morphs the waveform from ramp-down through triangle to ramp-up. |
+| Tides | `tides` | Modulation | Shapeable clock-synced modulation source (Tides-inspired); slope morphs the waveform from ramp-down through triangle to ramp-up. |
 | Ratchet | `ratchet` | Utility | Stutter/roll processor; chops an incoming note into rapid same-pitch retriggers at a configurable probability and division. |
 | Swing | `swing` | Utility | Groove/timing processor; delays off-beat steps for a shuffled feel, with optional velocity and micro-timing humanization. |
-| Branches | `branches` | Utility | Bernoulli gate / probability router (Mutable Branches-inspired); routes or drops each note across two outputs via a weighted coin flip. |
+| Branches | `branches` | Utility | Bernoulli gate/probability router (Mutable Branches-inspired); routes or drops each note across two outputs via a weighted coin flip. |
+
+Gen, Marbles, Markov and Turing also take an explicit **key/root**, so a
+standalone voice with no ChordSeq publisher on the harmony bus isn't stuck on
+a default key.
 
 ## Feedback
 
